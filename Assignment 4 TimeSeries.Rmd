@@ -1,0 +1,137 @@
+---
+title: "Assignment 4 TimeSeries"
+author: "Ebrahim Basrai"
+date: "2025-02-28"
+output: html_document
+---
+
+```
+knitr::opts_chunk$set(echo = TRUE)
+
+
+# Assignment 4 Running forecasting models on your timeseries
+
+```{r}
+
+
+library(fpp)
+library(fpp2)
+library(TTR)
+
+hp <- read.csv("/Users/ebrahimbasrai/Documents/TimeSeries/NYSTHPI.csv", stringsAsFactors = FALSE)
+str(hp)
+head(hp)
+
+hp$NYSTHPI <- as.numeric(hp$NYSTHPI)
+
+hp$observation_date <- as.Date(hp$observation_date)
+plot(hp$observation_date, hp$NYSTHPI, main = "NYSTHPI Over Time", xlab = "Date", ylab = "NYSTHPI")
+
+hp_ts <- ts(hp$NYSTHPI, start = c(1975, 1), frequency = 4)
+
+# Define Train vs Test Split
+train <- window(hp_ts, end = c(2024, 1))  
+test <- window(hp_ts, start = c(2023, 4))
+
+attributes(hp_ts)
+plot(hp_ts)
+### The time series is plotted with a general upward trend.
+Acf(hp_ts)
+### The ACF shows the trend is strong.But with this trend there is no clear sign of seasonality. 
+str(hp)
+class(hp_ts)
+
+
+
+#take Mean of all available history
+mean_forecast <- meanf(train, h = 10)  
+plot(mean_forecast)
+### The mean forecast doesnt help because it doestn take into account the upward trend in the data. 
+# Naive
+naive_forecast <- naive(train,5)
+plot(naive_forecast)
+### This model does show a better forecast by using the last few data points but doesnt really take into account the major upward trend. 
+# Random Walk
+rwf_forecast <- rwf(train,5)
+rwf_forecast <- rwf(train,5, drift=TRUE)
+plot(rwf_forecast)
+### This forecast does take into account the upward trend with using the drift. 
+
+# Seasonal Naive
+snaive_forecast <- snaive(train,5)
+plot(snaive_forecast)
+
+#The seasonal naive shows a downward trend but there isnt much seasonality as seen in the ACF so the forecast isnt as strong. 
+
+# Moving Averages
+MA4_forecast <- ma(train,order=4)
+MA10_forecast <- ma(train,order=10)
+plot(MA4_forecast)
+plot(MA10_forecast)
+### Both of these models show the general increasing trend and display the almost vertical increase in prices. 
+
+# plot all in a single chart
+plot(mean_forecast)
+lines(naive_forecast$mean,col="red")
+lines(rwf_forecast$mean,col="green")
+lines(snaive_forecast$mean,col="black")
+lines(MA4_forecast,col="Pink")
+lines(MA10_forecast,col="Blue")
+### As seen the different models are pretty close to the time series with the exception of the mean. 
+
+# what other attributes are there?
+attributes(naive_forecast)
+
+# Decomposition
+ets_forecast <- ets(train)
+plot(ets_forecast)
+attributes(ets_forecast)
+ets_forecast$mse
+### There is a strong upward trend byt also you can see time of economic downturns and its effects on prices.
+
+# HoltWinters
+HW_forecast <- HoltWinters(train)
+plot(HW_forecast)
+### This graph does a good job with being aligned with the timeseries
+SSE_Simple <- HoltWinters(hp_ts,beta=FALSE,gamma=FALSE)
+attributes(SSE_Simple)
+plot(SSE_Simple)
+### This graph is more fitted to the timeseries than the previous plot. 
+SSE_Simple$SSE
+head(SSE_Simple$fitted)
+
+#Forecast
+forecast_ets_1 <- forecast.ets(ets_forecast, h=5)
+plot(forecast_ets_1)
+forecast_ets_2 <- forecast(ets_forecast, h=10)
+plot(forecast_ets_2)
+### Both of the forecast plots predict a further increase in price. 
+#Moving average
+MA4_forecast <- ma(train, order = 4)
+plot(MA4_forecast)
+
+mean_acc <- accuracy(mean_forecast, test)
+naive_acc <- accuracy(naive_forecast, test)
+rwf_acc <- accuracy(rwf_forecast, test)
+snaive_acc <- accuracy(snaive_forecast, test)
+MA4_acc <- accuracy(MA4_forecast, train)
+
+print(mean_acc)
+### The MAPE is 61.96 which tells us that the forecasting model is not accurate. 
+print(naive_acc)
+### The MAPE is 4.71 which tells us that the forecast model is a decent indicator but not perfect. 
+
+print(rwf_acc)
+### The MAPE is 4.04 which is better than the naive and it is a decent indicator but can be improved upon. 
+
+print(snaive_acc)
+### The MAPE is 7.38 this is worse than the naive and rwf and can be used as an indicator but not as strong as the other models. 
+
+print(MA4_acc)
+### The MAPE is .71 which is the best model out of the ones that have been completed. This is a really strong indicator that can be used for future forecasting. 
+
+
+### The Moving average is the best for forecasting. Using the last 4 periods to make a prediction proves to be relatively accurate compared to other models. With the really low MAPE as well as the ACF1 being close to 0 which means the residuals are not correlated which in other words means they are random. 
+```
+```
+
